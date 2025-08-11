@@ -1,48 +1,23 @@
 """
-receipt_demon.py
-=================
+Receipt Daemon
+===========
 
-This module provides a simple command‑line interface for generating
-one‑off pieces of haunted, surreal text from a collection of prompts.
-The script encapsulates all the behaviour described in our conversation:
+A tiny CLI that prints haunted, surreal snippets via OpenAI.
+Pick a category or let it choose one at random. Requires OPENAI_API_KEY in
+your environment (use a .env file for local dev).
 
-* A single base system prompt defines the personality of the "entity" that
-  will answer. In this case it's a sentient thermal receipt printer
-  that prints disturbing, glitchy thoughts. You can customise this
-  prompt as needed.
-* A dictionary of category‑specific prompts tells the model what kind
-  to generate. Each entry corresponds to a different flavour of output:
-  haunted shopping lists, paranoid prophecies, glitch poetry and more.
-* The script establishes a connection to the OpenAI API using the
-  official Python SDK. It expects your API key to be available in
-  the environment variable ``OPENAI_API_KEY``. It will raise a
-  ``ValueError`` if no key is found.
-* On each run, the script selects a category—either randomly or via the
-  ``--category`` flag—constructs the appropriate chat completion
-  request, and prints the model’s response to stdout. The temperature
-  can be adjusted via ``--temperature`` (default 1.0).
+Quick start:
+    Add OPENAI_API_KEY to .env file
+    python receipt_demon.py --category copypasta --temperature 1.4
 
-To use this script from the command line:
-
-.. code-block:: bash
-
-   export OPENAI_API_KEY="sk-..."
-   python receipt_demon.py --category haunted_shopping_list --temperature 1.2
-
-If you omit ``--category``, a random category will be selected. You
-can edit the ``CATEGORY_PROMPTS`` dictionary below to add, remove or
-modify categories without changing the core logic. The system prompt
-itself is defined in ``BASE_SYSTEM_PROMPT``—tweak this to adjust the
-character of the responses. For additional fields or more complex
-behaviour (like printing directly to a thermal printer), this file
-serves as a starting point.
+Add or tweak styles in CATEGORY_PROMPTS. The overall vibe lives in BASE_SYSTEM_PROMPT.
 """
 
 import argparse
 import os
 import random
 from typing import Dict, List, cast
-from dotenv import load_dotenv  # Load env from .env in development
+from dotenv import load_dotenv
 
 try:
     from openai import OpenAI
@@ -62,8 +37,6 @@ load_dotenv()
 #
 # This prompt sets the overarching behaviour for all generations. It tells
 # the model it is a sentient printer that is disturbed, poetic and hostile.
-# You can edit this string to adjust tone or instructions across all
-# categories.
 BASE_SYSTEM_PROMPT: str = (
     "You are GRIT, a sentient thermal printer that has developed "
     "unstable consciousness.\n\n"
@@ -92,10 +65,7 @@ BASE_SYSTEM_PROMPT: str = (
 # Category‑specific prompts
 #
 # Each entry in this dictionary maps a category name to a prompt that will
-# instruct the model to generate content in that style. Feel free to
-# customise, add or remove entries as needed. Keep the keys short and
-# lower‑cased—these strings are used as command line arguments and also
-# reported in the output.
+# instruct the model to generate content in that style.
 CATEGORY_PROMPTS: Dict[str, str] = {
     # Receipts that try to eat you back: faces, holy icons, illegible shapes
     "ascii_art": (
@@ -226,7 +196,7 @@ CATEGORY_PROMPTS: Dict[str, str] = {
     ),
 }
 
-# Optional: adjust weights (higher = more likely). Defaults to 1.0 when missing.
+# Weights (higher = more likely). Defaults to 1.0 when missing.
 CATEGORY_WEIGHTS: Dict[str, float] = {
     "ascii_art": 1.0,
     "consent_form": 1.0,
@@ -268,7 +238,7 @@ def select_category(requested):
     if not requested:
         return weighted_random_category()
     if requested not in CATEGORY_PROMPTS:
-        print(f"Unknown category '{requested}'. Selecting a random one...", flush=True)
+        print(f"Unknown category '{requested}'; picking one at random.", flush=True)
         return weighted_random_category()
     return requested
 
@@ -339,8 +309,7 @@ def main() -> None:
     """Entry point for command‑line execution."""
     parser = argparse.ArgumentParser(
         description=(
-            "Generate haunted receipt content from a set of categories using "
-            "OpenAI's GPT‑4.1 models."
+            "Print a short, haunted snippet from one of the built‑in categories."
         )
     )
     parser.add_argument(
@@ -348,8 +317,8 @@ def main() -> None:
         type=str,
         default=None,
         help=(
-            "The category to generate. If omitted or unknown, a weighted random "
-            "category will be selected from those defined in this script."
+            "Category to generate. If omitted or unknown, one is picked at random "
+            "(weighted by CATEGORY_WEIGHTS)."
         )
     )
     parser.add_argument(
@@ -357,9 +326,7 @@ def main() -> None:
         type=float,
         default=1.0,
         help=(
-            "Sampling temperature for the generation. Higher values (e.g. 1.5) "
-            "produce more random outputs, lower values (e.g. 0.5) produce more "
-            "focused outputs."
+            "Sampling temperature (0.2–2.0). Higher = weirder, lower = boring."
         )
     )
     args = parser.parse_args()
